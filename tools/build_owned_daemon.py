@@ -19,6 +19,12 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def valid_target_title(title):
+    # Explicit native titles still use an exact runtime identity comparison.
+    # The service wildcard retains its existing PPSA-only discovery scope.
+    return title == "*" or re.fullmatch(r"(?:PPSA|FAKE)[0-9]{5}", title) is not None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sdk", type=Path,
@@ -28,7 +34,7 @@ def main():
                         help="build a resident daemon for repeated cooperative requests")
     parser.add_argument("--elf-helper", action="store_true",
                         help="build a one-request helper for the local elfldr client")
-    parser.add_argument("--title", help="PPSA title, or * for all PPSA titles")
+    parser.add_argument("--title", help="Exact PPSA or FAKE title, or * for all PPSA titles")
     parser.add_argument("--require-client-result", action="store_true",
                         help="require the laboratory data read/write result file")
     parser.add_argument("--max-requests", type=int, default=0,
@@ -41,8 +47,8 @@ def main():
     if not args.service and args.max_requests:
         parser.error("--max-requests requires --service")
     title = args.title or ("*" if args.service else "PPSA99994")
-    if title != "*" and not re.fullmatch(r"PPSA[0-9]{5}", title):
-        parser.error("--title must be a PPSA title or *")
+    if not valid_target_title(title):
+        parser.error("--title must be an exact PPSA or FAKE title, or *")
     if not args.service and title == "*":
         parser.error("one-request build requires an exact title")
     require_client_result = args.require_client_result or (
