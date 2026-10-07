@@ -40,6 +40,18 @@ extern intptr_t kernel_get_ucred_prison(pid_t pid);
 #ifndef LAPY_ELF_HELPER
 #define LAPY_ELF_HELPER 0
 #endif
+/* Rule mode (ELF helper only): serve any title in LAPY_TITLE_PREFIX's range
+ * that is listed in the root-owned LAPY_TITLE_ALLOW_LIST, instead of exactly
+ * TARGET_TITLE. */
+#ifndef LAPY_TITLE_RULE
+#define LAPY_TITLE_RULE 0
+#endif
+#if LAPY_TITLE_RULE
+#if !LAPY_ELF_HELPER
+#error "LAPY_TITLE_RULE requires LAPY_ELF_HELPER"
+#endif
+#include "title_rule.h"
+#endif
 #define TITLE_PREFIX TARGET_TITLE "_"
 #define SANDBOX_BASE "/mnt/sandbox"
 #define REQUEST_SUFFIX "/download0/elevate_proc"
@@ -882,8 +894,20 @@ static int helper_target_title_matches(pid_t pid)
 {
     struct helper_app_info info;
     memset(&info, 0, sizeof(info));
+#if LAPY_TITLE_RULE
+    if (sceKernelGetAppInfo(pid, &info) != 0) return 0;
+    info.title_id[sizeof(info.title_id) - 1] = 0;
+    enum lapy_title_rule_result rule = lapy_title_rule_check(
+        info.title_id, LAPY_TITLE_PREFIX, LAPY_TITLE_ALLOW_LIST, 0);
+    ps5log_printf(rule ? PS5LOG_ERR : PS5LOG_MARK,
+                  "title_rule build=%s pid=%d title=%.9s result=%s",
+                  LAPY_OWNED_ID, pid, info.title_id,
+                  lapy_title_rule_name(rule));
+    return rule == LAPY_TITLE_RULE_ALLOWED;
+#else
     return sceKernelGetAppInfo(pid, &info) == 0 &&
            !memcmp(info.title_id, TARGET_TITLE, sizeof(TARGET_TITLE));
+#endif
 }
 
 static uint32_t helper_status_for_error(int error)

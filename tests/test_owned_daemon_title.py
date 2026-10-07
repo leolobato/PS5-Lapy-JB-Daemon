@@ -22,5 +22,17 @@ class OwnedDaemonTitleTests(unittest.TestCase):
         self.assertTrue(build.valid_target_title("*"))
 
 
+    def test_title_rule_names_a_range_and_an_absolute_allow_list(self):
+        self.assertTrue(build.valid_title_rule("FAKE78", "/data/playden/title-rule/allow-list"))
+        self.assertTrue(build.valid_title_rule("FAKE", "/a"))
+
+    def test_title_rule_rejects_unsafe_ranges_and_paths(self):
+        for prefix in ("", "FAK", "fake78", "FAKE78*", "FAKE78090", "FAKE7a", None):
+            self.assertFalse(build.valid_title_rule(prefix, "/data/allow"), prefix)
+        for path in ("", "data/allow", "/data/../allow", "/data/./allow", "/data/allow/",
+                     "/data/al low", '/data/"allow', "/data//allow", "/" + "a" * 300, None):
+            self.assertFalse(build.valid_title_rule("FAKE78", path), path)
+
+
 if __name__ == "__main__":
     unittest.main()

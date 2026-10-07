@@ -43,6 +43,8 @@ check-native:
 	./build/host/test_filedesc_refcount
 	$(HOST_CC) -std=c11 -Wall -Wextra -Werror -g -fsanitize=address,undefined -Isource source/vnode_ref_probe.c tests/test_vnode_ref_probe.c -o build/host/test_vnode_ref_probe
 	./build/host/test_vnode_ref_probe
+	$(HOST_CC) -std=c11 -Wall -Wextra -Werror -g -fsanitize=address,undefined -Isource source/title_rule.c tests/test_title_rule.c -o build/host/test_title_rule
+	./build/host/test_title_rule
 
 # Compile the transport component only; this is not an elevation payload.
 native-components:
